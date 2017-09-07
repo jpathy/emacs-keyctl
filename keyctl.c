@@ -230,7 +230,7 @@ keyctl_describe_fn(emacs_env *env, ptrdiff_t nargs, emacs_value args[],
   gid_t gid;
   key_perm_t perm;
   int tlen, dpos, n;
-  n = sscanf(buffer, "%*[^;]%n;%d;%d;%x;%n", &tlen, &uid, &gid, &perm, &dpos);
+  n = sscanf(buffer, "%*[^;]%n;%u;%u;%x;%n", &tlen, &uid, &gid, &perm, &dpos);
   if (n != 3) {
     char *err_s = "Unparseable description obtained for key %d";
     emacs_value lisp_str = env->funcall(
