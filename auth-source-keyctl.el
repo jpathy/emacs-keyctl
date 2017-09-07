@@ -17,8 +17,11 @@
 (autoload 'keyctl~list "keyctl")
 (autoload 'keyctl~unlink "keyctl")
 
-(defconst COUNTER-KEY-NAME "auth-source:counter"
-  "Description for the counter key under the keyring chosen by backend")
+(defconst auth-source-keyrings-counter-name "auth-source:counter"
+  "Description for the counter key under the keyring chosen by backend.")
+
+(defconst auth-source-default-keyrings-name "auth-source:authinfo"
+  "Description of default keyring used.")
 
 (defun auth-source-backends-parser-linux-keyrings (entry)
   "Create a linux-keyrings auth-source backend from ENTRY."
@@ -73,8 +76,8 @@
                        (keyctl~new-keyring source KEY-SPEC-PROCESS-KEYRING)))
              (counter (or
                        (ignore-errors
-                         (keyctl~search keyring "user" COUNTER-KEY-NAME))
-                       (keyctl~add-key "user" COUNTER-KEY-NAME "0" keyring)))
+                         (keyctl~search keyring "user" auth-source-keyrings-counter-name))
+                       (keyctl~add-key "user" auth-source-keyrings-counter-name "0" keyring)))
              (next-key (string-to-number (keyctl~read counter)))
              (plist (list
                      :keyring keyring
@@ -100,8 +103,9 @@
 
                   ;; send back the secret in a function (lexical binding)
                   (when (equal k "secret")
-                    (setq v (lambda ()
-                              v)))
+                    (setq v (let ((lexv v))
+                              (lambda ()
+                               lexv))))
                   (setq ret (plist-put ret
                                        (auth-source--symbol-keyword k)
                                        v))))
@@ -192,7 +196,8 @@ machine item."
              collect alist)))
 
 (cl-defun auth-source-linux-keyrings-search (&rest spec
-                                                   &key backend require create
+                                                   &key backend require
+                                                   create delete
                                                    type max host user port
                                                    &allow-other-keys)
   "Given a property list SPEC, return search matches from the :backend.
@@ -207,10 +212,12 @@ See `auth-source-search' for details on SPEC."
                     :keyring keyring
                     :max max
                     :require require
+                    :delete delete
                     :host (or host t)
                     :user (or user t)
                     :port (or port t)))))
-    ;; when delete is non-nil we are guaranteed to get results(which are deleted)
+    ;; When delete is non-nil, matching entries are deleted
+    ;; and returned as results. So create have no effect.
     (when (and create
                (not results))
       ;; create based on the spec and record the value
@@ -223,7 +230,8 @@ See `auth-source-search' for details on SPEC."
 
                      ;; the result will be returned, even if the search fails
                      (apply #'auth-source-linux-keyrings-search
-                            (plist-put spec :create nil)))))))
+                            (plist-put spec :create nil)))))
+    results))
 
 (cl-defun auth-source-linux-keyrings-create (&rest spec
                                                    &key backend create
@@ -361,7 +369,7 @@ See `auth-source-search' for details on SPEC."
                                    auth-source-keyrings-cache))
                   :next-key (1+ next-key))
        (lambda ()
-         (keyctl~update-key (keyctl~search keyring "user" COUNTER-KEY-NAME)
+         (keyctl~update-key (keyctl~search keyring "user" auth-source-keyrings-counter-name)
                             (number-to-string (1+ next-key)))
          (keyctl~add-key "user" (number-to-string next-key) add keyring))))
 
