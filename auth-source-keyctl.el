@@ -7,12 +7,12 @@
 (eval-when-compile
   (require 'rx)
   (require 'cl-lib))
-(require 'seq)
 (require 'auth-source)
 
 (autoload 'keyctl~new-keyring "keyctl")
 (autoload 'keyctl~add-key "keyctl")
-(autoload 'keyctl~describe "keyctl")
+(autoload 'keyctl~update-key "keyctl")
+(autoload 'keyctl~search "keyctl")
 (autoload 'keyctl~read "keyctl")
 (autoload 'keyctl~list "keyctl")
 (autoload 'keyctl~unlink "keyctl")
@@ -29,10 +29,10 @@
   ;; matching any user, host, and protocol
   (when (and (stringp entry) (string-match "^linux-keyrings:\\(.+\\)" entry))
     (setq entry `(:source (:linux-keyrings ,(match-string 1 entry)))))
-  ;; take 'linux-keyrings and use "authinfo" as a process-keyring
+  ;; take 'linux-keyrings and use "auth-source:authinfo" as a process-keyring
   ;; matching any user, host, and protocol
   (when (eq entry 'linux-keyrings)
-    (setq entry '(:source (:linux-keyrings "auth-source:authinfo"))))
+    (setq entry '(:source (:linux-keyrings auth-source-default-keyrings-name))))
   (let ((source-spec (plist-get entry :source)))
     (cond
      ((and
